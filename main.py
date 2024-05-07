@@ -8,8 +8,8 @@ import sqlalchemy
 from sqlalchemy import create_engine
 
 
-user = "montecchiacorp"
-password = "k-gpQzCw-uU5zQf"
+user = ""
+password = ""
 sql = "sqlite:///adbb.db"
 
 adbb.init(sql, user, password, debug=True)
