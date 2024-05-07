@@ -1,50 +1,91 @@
 import toga
+from toga.sources import ListSource
 from toga.style import Pack
 from toga.style.pack import COLUMN, LEFT, RIGHT, ROW
-import anidbcli
+import adbb
+from adbb import Anime
+import sqlalchemy
+from sqlalchemy import create_engine
 
 
-class Serie:
-    nombre = ""
-    cantidad_capitulos = 0
-    capitulos = []
+user = "montecchiacorp"
+password = "k-gpQzCw-uU5zQf"
+sql = "sqlite:///adbb.db"
+
+adbb.init(sql, user, password, debug=True)
+Session = adbb.get_session()
+
+animes = Session.query(adbb.db.AnimeTable.aid).all()
+ids = [numero[0] for numero in animes]
 
 
-def agregar_serie(tabla_series, nombre, cantidad_capitulos, capitulos=None):
-    serie = Serie()
-    serie.nombre = nombre
-    serie.cantidad_capitulos = cantidad_capitulos
-    if capitulos is not None:
-        serie.capitulos = capitulos
-    tabla_series.append(serie)
+def agregar_serie(tabla_series, nombre):
+    anime = adbb.Anime(nombre)
+    tabla_series.data.append([anime.title, anime.highest_episode_number])
+
+
+def llenar_capitulos(tabla_capitulos, animeid):
+    anime = adbb.Anime(animeid)
+    for numero in anime.highest_episode_number:
+        episodio = adbb.Episode(anime=anime, epno=numero)
+        tabla_capitulos.data.append([episodio.epno, episodio.title, False])
+
+def tempor():
+    print("AAAA")
 
 
 class SeguidorSeries (toga.App):
+
+    def cargar_capitulos(self, row=None):
+        def on_activate():
+            try:
+                print("AAAAASD")
+                llenar_capitulos(self.tabla_capitulos, row[0])
+            except Exception as e:
+                print(e)
+
+        return on_activate
+
     def startup(self):
         main_box = toga.Box(style=Pack(direction=COLUMN))
 
-        box_ingresos = toga.Box(style=Pack(direction=COLUMN))
-        box_tablas = toga.Box(style=Pack(direction=ROW))
+        box_ingresos = toga.Box(style=Pack(direction=COLUMN, flex=1))
+        box_tablas = toga.Box(style=Pack(direction=ROW, flex=2))
 
-        tabla_series = toga.Table(headings=["Título", "Capítulos"], style=Pack(flex=1, direction=ROW))
-        tabla_capitulos = toga.Table(headings=["Capítulo", "Visto"], style=Pack(flex=1, direction=ROW))
-        box_tablas.add(tabla_series)
-        box_tablas.add(tabla_capitulos)
+        self.tabla_capitulos = toga.Table(
+            headings=["Capítulo", "Título", "Visto"],
+            style=Pack(flex=1, direction=ROW))
+
+
+        self.tabla_series = toga.Table(
+            headings=["Título", "Capítulos"],
+            style=Pack(flex=1, direction=ROW),
+            on_activate=self.cargar_capitulos,
+            multiple_select=False)
+
+        box_tablas.add(self.tabla_series)
+        box_tablas.add(self.tabla_capitulos)
 
         box_nombre = toga.Box(style=Pack(direction=ROW, padding=5))
         input_nombre = toga.TextInput(value="ejemplo.txt", style=Pack(flex=1))
-        label_nombre = toga.Label("Nombre del archivo:                    ")
+        label_nombre = toga.Label("Nombre de la serie:                    ")
         box_nombre.add(label_nombre)
         box_nombre.add(input_nombre)
 
-        box_url = toga.Box(style=Pack(direction=ROW, padding=5))
-        input_url = toga.TextInput(value="https://test.com/series/", style=Pack(flex=1))
-        label_url = toga.Label("URL del listado de series:             ")
-        box_url.add(label_url)
-        box_url.add(input_url)
+        def iniciar():
+            def on_press(input_button):
+                try:
+                    return agregar_serie(self.tabla_series,
+                                         input_nombre.value)
+                except Exception as e:
+                    print(str(e))
+
+            return on_press
+
+        input_button = toga.Button("Iniciar", on_press=iniciar())
 
         box_ingresos.add(box_nombre)
-        box_ingresos.add(box_url)
+        box_ingresos.add(input_button)
 
         main_box.add(box_tablas)
         main_box.add(box_ingresos)
