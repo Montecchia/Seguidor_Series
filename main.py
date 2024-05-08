@@ -1,11 +1,8 @@
 import toga
-from toga.sources import ListSource
 from toga.style import Pack
 from toga.style.pack import COLUMN, LEFT, RIGHT, ROW
 import adbb
-from adbb import Anime
-import sqlalchemy
-from sqlalchemy import create_engine
+import relleno
 
 
 user = "montecchiacorp"
@@ -21,21 +18,47 @@ ids = [numero[0] for numero in animes]
 
 def agregar_serie(tabla_series, nombre):
     anime = adbb.Anime(nombre)
-    tabla_series.data.append([anime.title, anime.highest_episode_number])
+    tiene_relleno = False
+    titulo_anime = anime.title
+    for titulo in anime.titles:
+        if titulo.lang == "eng" and titulo.titletype == "official":
+            titulo_anime = titulo.title
+            break
+
+    link_relleno = relleno.buscar_serie(titulo_anime)
+    if link_relleno is not None:
+        tiene_relleno = True
+
+    tabla_series.data.append({"título": titulo_anime,
+                              "capítulos": anime.highest_episode_number,
+                              "relleno": tiene_relleno,
+                              "link": link_relleno})
 
 
-def llenar_capitulos(tabla_capitulos, nombre_anime):
+def llenar_capitulos(tabla_capitulos, nombre_anime, url_relleno):
     anime = adbb.Anime(nombre_anime)
+    lista_relleno = relleno.lista_relleno(url_relleno)
     for numero in range(1, anime.highest_episode_number+1):
+        es_relleno = "Canon"
         episodio = adbb.Episode(anime=anime, epno=numero)
-        tabla_capitulos.data.append([episodio.epno, episodio.title_eng, False])
+        if numero in lista_relleno:
+                es_relleno = "Relleno"
+        tabla_capitulos.data.append([episodio.epno, episodio.title_eng, False, es_relleno])
+        tabla_capitulos.refresh()
 
 
 class SeguidorSeries (toga.App):
 
     def cargar_capitulos(self, *args, row):
         self.tabla_capitulos.data.clear()
-        llenar_capitulos(self.tabla_capitulos, row.título)
+        llenar_capitulos(self.tabla_capitulos, row.título, row.link)
+
+    def alternar_visto(self, *args, row):
+        if row.visto:
+            row.visto = False
+        else:
+            row.visto = True
+        self.tabla_capitulos.refresh()
 
     def startup(self):
         main_box = toga.Box(style=Pack(direction=COLUMN))
@@ -44,12 +67,13 @@ class SeguidorSeries (toga.App):
         box_tablas = toga.Box(style=Pack(direction=ROW, flex=2))
 
         self.tabla_capitulos = toga.Table(
-            headings=["Capítulo", "Título", "Visto"],
-            style=Pack(flex=1, direction=ROW))
-
+            headings=["Capítulo", "Título", "Visto", "Tipo"],
+            style=Pack(flex=2, direction=ROW),
+            on_activate=self.alternar_visto)
 
         self.tabla_series = toga.Table(
-            headings=["Título", "Capítulos"],
+            headings=["Título", "Capítulos", "Relleno"],
+            data=[],
             style=Pack(flex=1, direction=ROW),
             on_activate=self.cargar_capitulos,
             multiple_select=False)
