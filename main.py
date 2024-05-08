@@ -8,8 +8,8 @@ import sqlalchemy
 from sqlalchemy import create_engine
 
 
-user = ""
-password = ""
+user = "montecchiacorp"
+password = "k-gpQzCw-uU5zQf"
 sql = "sqlite:///adbb.db"
 
 adbb.init(sql, user, password, debug=True)
@@ -24,27 +24,18 @@ def agregar_serie(tabla_series, nombre):
     tabla_series.data.append([anime.title, anime.highest_episode_number])
 
 
-def llenar_capitulos(tabla_capitulos, animeid):
-    anime = adbb.Anime(animeid)
-    for numero in anime.highest_episode_number:
+def llenar_capitulos(tabla_capitulos, nombre_anime):
+    anime = adbb.Anime(nombre_anime)
+    for numero in range(1, anime.highest_episode_number+1):
         episodio = adbb.Episode(anime=anime, epno=numero)
-        tabla_capitulos.data.append([episodio.epno, episodio.title, False])
-
-def tempor():
-    print("AAAA")
+        tabla_capitulos.data.append([episodio.epno, episodio.title_eng, False])
 
 
 class SeguidorSeries (toga.App):
 
-    def cargar_capitulos(self, row=None):
-        def on_activate():
-            try:
-                print("AAAAASD")
-                llenar_capitulos(self.tabla_capitulos, row[0])
-            except Exception as e:
-                print(e)
-
-        return on_activate
+    def cargar_capitulos(self, *args, row):
+        self.tabla_capitulos.data.clear()
+        llenar_capitulos(self.tabla_capitulos, row.título)
 
     def startup(self):
         main_box = toga.Box(style=Pack(direction=COLUMN))
@@ -62,6 +53,9 @@ class SeguidorSeries (toga.App):
             style=Pack(flex=1, direction=ROW),
             on_activate=self.cargar_capitulos,
             multiple_select=False)
+
+        for anime in ids:
+            agregar_serie(self.tabla_series, anime)
 
         box_tablas.add(self.tabla_series)
         box_tablas.add(self.tabla_capitulos)
