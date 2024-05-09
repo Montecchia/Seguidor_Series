@@ -54,6 +54,7 @@ def llenar_capitulos(tabla_capitulos, nombre_anime, url_relleno, filtrar_relleno
 
 class SeguidorSeries (toga.App):
     current_row = None
+
     def cargar_capitulos(self, *args, row):
         if row is not None:
             self.tabla_capitulos.data.clear()
@@ -73,10 +74,13 @@ class SeguidorSeries (toga.App):
             row.visto = True
         self.tabla_capitulos.refresh()
 
+    def filtrar_relleno(self, *args):
+        self.cargar_capitulos(row=self.current_row)
+
     def startup(self):
         main_box = toga.Box(style=Pack(direction=COLUMN))
 
-        box_ingresos = toga.Box(style=Pack(direction=COLUMN, flex=1))
+        box_ingresos = toga.Box(style=Pack(direction=COLUMN, flex=1, height=100))
         box_tablas = toga.Box(style=Pack(direction=ROW, flex=5))
 
         self.tabla_capitulos = toga.Table(
@@ -98,8 +102,8 @@ class SeguidorSeries (toga.App):
         box_tablas.add(self.tabla_capitulos)
 
         box_nombre = toga.Box(style=Pack(direction=ROW, padding=5))
-        input_nombre = toga.TextInput(value="ejemplo.txt", style=Pack(flex=1))
-        label_nombre = toga.Label("Nombre de la serie:                    ")
+        input_nombre = toga.TextInput(value="ejemplo.txt", style=Pack(flex=25, padding=3, alignment=RIGHT, width=500))
+        label_nombre = toga.Label("Nombre de la serie:  ", style=Pack(padding=5))
         box_nombre.add(label_nombre)
         box_nombre.add(input_nombre)
 
@@ -113,21 +117,26 @@ class SeguidorSeries (toga.App):
 
             return on_press
 
-        input_button = toga.Button("Iniciar", on_press=iniciar())
+        input_button = toga.Button("Iniciar", on_press=iniciar(), style=Pack(flex=1, padding=7, alignment=RIGHT))
 
         self.filtrar_relleno = toga.Switch(
             "Ocultar relleno",
             value=False,
-            on_change=self.cargar_capitulos(row=self.current_row))
+            on_change=self.filtrar_relleno)
 
         self.barra_carga = toga.ProgressBar(style=Pack(flex=1))
 
         box_checks = toga.Box(style=Pack(direction=ROW, padding=2))
+        box_input = toga.Box(style=Pack(direction=ROW, padding=2))
 
-        box_ingresos.add(box_nombre)
-        box_ingresos.add(input_button)
+        separador1 = toga.Divider(style=Pack(padding=5))
+
+        box_input.add(box_nombre)
+        box_input.add(input_button)
         box_checks.add(self.filtrar_relleno)
         box_checks.add(self.barra_carga)
+        box_ingresos.add(box_input)
+        box_ingresos.add(separador1)
         box_ingresos.add(box_checks)
 
         main_box.add(box_tablas)
